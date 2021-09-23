@@ -66,10 +66,14 @@ fn create_mock_server_call<'a>(env: Env<'a>, pact_json:&str, port_arg:u16) -> Ni
             // (port).encode(env)
             Ok(((atoms::ok(), port)).encode(env))
         },
-        Err(MockServerError::MockServerFailedToStart) =>
-            Ok( (atoms::error(), atoms::mock_server_failed_to_start()).encode(env) ),
-        Err(MockServerError::InvalidPactJson) => 
+        Err(_e) => {
             Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
+         }
+
+        // Err(MockServerError::MockServerFailedToStart) =>
+        //     Ok( (atoms::error(), atoms::mock_server_failed_to_start()).encode(env) ),
+        // Err(MockServerError::InvalidPactJson) => 
+        //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
 
         // Err(MockServerError::MockServerFailedToStart.into()) => 
         //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
