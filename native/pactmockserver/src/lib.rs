@@ -17,7 +17,10 @@ use pact_mock_server::mock_server_mismatches;
 use pact_mock_server::mock_server_matched;
 use pact_mock_server::write_pact_file;
 use pact_mock_server::WritePactFileErr; 
-use pact_mock_server::cleanup_mock_server_ffi;
+use pact_mock_server::shutdown_mock_server;
+
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 
 mod atoms {
     rustler::atoms! {
@@ -44,17 +47,42 @@ rustler::init!(
 );
 
 #[rustler::nif(name = "create_mock_server")]
-fn create_mock_server_call<'a>(env: Env<'a>, pact_json:&str, port_arg:i32) -> NifResult<Term<'a>> {
-    let port = create_mock_server(pact_json, port_arg);
+// fn create_mock_server_call<'a>(env: Env<'a>, pact_json:&str, port_arg:std::net::SocketAddr) -> NifResult<Term<'a>> {
+fn create_mock_server_call<'a>(env: Env<'a>, pact_json:&str, port_arg:u16) -> NifResult<Term<'a>> {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port_arg);
+    // let addr = std::net::SocketAddr::from(port_arg);
+    // let port = create_mock_server(pact_json, addr).context(format!("Unable to create server"), )?;
+    let port = create_mock_server(pact_json, addr);
+    // let mut addr = std::net::SocketAddr::into(port);
+    // if let Err(err) = create_mock_server(pact_json, addr) {
+    //     eprintln!("Error: {:?}", err);
+    //     std::process::exit(1);
+    // }
 
     match port {
         Ok(port) => {
-            Ok((atoms::ok(), port).encode(env))
-        }
+            // Ok((atoms::ok(), port).encode(env))
+            // let addr = std::net::SocketAddr::into(port);
+            // (port).encode(env)
+            Ok(((atoms::ok(), port)).encode(env))
+        },
         Err(MockServerError::MockServerFailedToStart) =>
             Ok( (atoms::error(), atoms::mock_server_failed_to_start()).encode(env) ),
         Err(MockServerError::InvalidPactJson) => 
             Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
+
+        // Err(MockServerError::MockServerFailedToStart.into()) => 
+        //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
+        // Err(port) => Err(MockServerError::MockServerFailedToStart),
+
+        // Err(_e) => Err(err) => match err.downcast_ref::<MockServerError>() {
+        // }
+        // Err(MockServerError::MockServerFailedToStart.into()) => 
+        //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
+        // Err(MockServerError::MockServerFailedToStart) =>
+        //     Ok( (atoms::error(), atoms::mock_server_failed_to_start()).encode(env) ),
+        // Err(MockServerError::InvalidPactJson) => 
+        //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
     }
 }
 
@@ -70,7 +98,7 @@ fn mock_server_matched_call(port:i32) -> NifResult<(Atom,bool)> {
 
 #[rustler::nif(name = "write_pact_file")]
 fn write_pact_file_call<'a>(env: Env<'a>, port:i32, dir_path:String) -> NifResult<Term<'a>> {
-    match write_pact_file(port, Some(dir_path)) {
+    match write_pact_file(port, Some(dir_path),true) {
         Ok(()) =>
             Ok((atoms::ok()).encode(env)),
         Err(WritePactFileErr::IOError) =>
@@ -82,5 +110,5 @@ fn write_pact_file_call<'a>(env: Env<'a>, port:i32, dir_path:String) -> NifResul
 
 #[rustler::nif(name = "cleanup_mock_server")]
 fn cleanup_mock_server_call(port:i32) -> NifResult<(Atom,bool)> {
-    Ok((atoms::ok(), cleanup_mock_server_ffi(port)))
+    Ok((atoms::ok(), shutdown_mock_server(port)))
 }
