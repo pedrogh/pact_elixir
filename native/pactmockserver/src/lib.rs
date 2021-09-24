@@ -50,43 +50,20 @@ rustler::init!(
 // fn create_mock_server_call<'a>(env: Env<'a>, pact_json:&str, port_arg:std::net::SocketAddr) -> NifResult<Term<'a>> {
 fn create_mock_server_call<'a>(env: Env<'a>, pact_json:&str, port_arg:u16) -> NifResult<Term<'a>> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), port_arg);
-    // let addr = std::net::SocketAddr::from(port_arg);
-    // let port = create_mock_server(pact_json, addr).context(format!("Unable to create server"), )?;
     let port = create_mock_server(pact_json, addr);
-    // let mut addr = std::net::SocketAddr::into(port);
-    // if let Err(err) = create_mock_server(pact_json, addr) {
-    //     eprintln!("Error: {:?}", err);
-    //     std::process::exit(1);
-    // }
 
     match port {
-        Ok(port) => {
-            // Ok((atoms::ok(), port).encode(env))
-            // let addr = std::net::SocketAddr::into(port);
-            // (port).encode(env)
-            Ok(((atoms::ok(), port)).encode(env))
-        },
-        Err(_e) => {
-            Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
-         }
-
-        // Err(MockServerError::MockServerFailedToStart) =>
-        //     Ok( (atoms::error(), atoms::mock_server_failed_to_start()).encode(env) ),
-        // Err(MockServerError::InvalidPactJson) => 
-        //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
-
-        // Err(MockServerError::MockServerFailedToStart.into()) => 
-        //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
-        // Err(port) => Err(MockServerError::MockServerFailedToStart),
-
-        // Err(_e) => Err(err) => match err.downcast_ref::<MockServerError>() {
-        // }
-        // Err(MockServerError::MockServerFailedToStart.into()) => 
-        //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
-        // Err(MockServerError::MockServerFailedToStart) =>
-        //     Ok( (atoms::error(), atoms::mock_server_failed_to_start()).encode(env) ),
-        // Err(MockServerError::InvalidPactJson) => 
-        //     Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) )
+        Ok(port) => Ok(((atoms::ok(), port)).encode(env)),
+        Err(err) => {
+            match err.downcast_ref::<MockServerError>() {
+                Some(MockServerError::InvalidPactJson) =>
+                    Ok( (atoms::error(), atoms::invalid_pact_json()).encode(env) ),
+                Some(MockServerError::MockServerFailedToStart) =>
+                    Ok( (atoms::error(), atoms::mock_server_failed_to_start()).encode(env) ),
+                None =>
+                    Err(rustler::Error::RaiseAtom("unexpected_error"))
+            }
+        }
     }
 }
 
