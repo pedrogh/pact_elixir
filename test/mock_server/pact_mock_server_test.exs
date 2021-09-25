@@ -2,6 +2,7 @@ defmodule PactElixir.PactMockServerTest do
   use ExUnit.Case
   alias PactElixir.{PactMockServer, ServiceProvider}
   import PactElixir.Dsl
+  require Logger
 
   setup do
     provider = new_service_provider()
@@ -57,7 +58,6 @@ defmodule PactElixir.PactMockServerTest do
     test "file exists", %{mock_server_pid: mock_server_pid} do
       # make sure all assertions are matched which is needed for the file to be written
       do_example_request(mock_server_pid)
-
       assert {:ok} == PactMockServer.write_pact_file(mock_server_pid)
       assert File.exists?(PactMockServer.pact_file_path(mock_server_pid))
     end
@@ -83,11 +83,16 @@ defmodule PactElixir.PactMockServerTest do
       assert PactMockServer.stop(mock_server_pid)
     end
 
+    @tag runnable: true
     test "stopped mock server returns empty body", %{mock_server_pid: mock_server_pid} do
       port = PactMockServer.port(mock_server_pid)
       assert :ok == PactMockServer.stop(mock_server_pid)
       refute Process.alive?(mock_server_pid)
-      assert "" == get_request("/foo", port).body
+      IO.puts "io - Before request"
+      # Logger.info("log - Before request")
+      body = get_request("/foo", port).body
+      # Logger.info("body " <> body)
+      assert "" == body
     end
   end
 
@@ -110,6 +115,15 @@ defmodule PactElixir.PactMockServerTest do
   end
 
   defp get_request(path, port) when is_number(port) do
+    # Attempting to debug to STDOUT.
+    # # IO.puts "making request with path {} and port {} ", path, port;
+    # IO.puts "making request with path #{path} and port #{port}"
+    # %HTTPoison.Response{} = HTTPoison.get!("http://localhost:#{port}#{path}");
+    # IO.inspect("%HTTPoison.Response {}", HTTPoison);
+    # # IO.puts("%HTTPoison.Response after");
+    # # IO.puts("%HTTPoison.Response {}", HTTPoison);
+    # # IO.puts("%HTTPoison.Response after");
+    # %HTTPoison.Response{}
     %HTTPoison.Response{} = HTTPoison.get!("http://localhost:#{port}#{path}")
   end
 

@@ -9,6 +9,7 @@ defmodule PactElixir.RustPactMockServerFacade do
 
   use Rustler, otp_app: :pact_elixir, crate: "pactmockserver"
 
+  # The return type is: {:ok, port} or {:error, something}
   def create_mock_server(_pact_json, _port), do: throw(:nif_not_loaded)
   def mock_server_mismatches(_port), do: throw(:nif_not_loaded)
 
